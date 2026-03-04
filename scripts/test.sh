@@ -3,8 +3,8 @@
 set -e
 set -x
 
-PYTHONPATH=credoai pytest \
+PYTHONPATH=movern pytest \
   --junitxml=junit.xml \
   --cov-config=.coveragerc \
   --cov-report=term-missing \
-  --cov=credoai tests/ "${@}"
+  --cov=movern tests/ "${@}"

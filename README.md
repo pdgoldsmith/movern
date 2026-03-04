@@ -1,79 +1,124 @@
+# Movern — AI Model Governance Assessment
 
+**Movern** (Model + Govern) is an open-source framework for evaluating AI models against responsible-AI standards.
+It provides a local UI for auditors to run structured assessments and export compliance reports mapped to **EU AI Act**, **NIST AI RMF**, and **ISO 42001**.
 
-![Workflow](https://github.com/credo-ai/credoai_lens/actions/workflows/test-reports.yml/badge.svg)
-![Tests](https://credoai-cicd-public-artifacts.s3.us-west-2.amazonaws.com/credoai_lens/main/tests-badge.svg)
-[![Coverage](https://credoai-cicd-public-artifacts.s3.us-west-2.amazonaws.com/credoai_lens/main/coverage-badge.svg)](https://credoai-cicd-public-artifacts.s3.us-west-2.amazonaws.com/credoai_lens/main/html/index.html)
+---
 
---------------------------------------
+## Attribution
 
-:warning: **_DEPRECATION WARNING:_** This project is no longer maintained.
+Movern is a community fork of [**Lens** by Credo AI](https://github.com/credo-ai/credoai_lens).
+The evaluators and core assessment engine originate from that project.
+Original authors: Ian Eisenberg and the Credo AI team. Original license: Apache 2.0.
 
-# Lens by Credo AI - Responsible AI Assessment Framework
+---
 
-Lens is a comprehensive assessment framework for AI systems. 
-Lens standardizes model and data assessment, and acts as a central gateway to assessments 
-created in the open source community. In short, Lens connects arbitrary AI models and datasets
-with Responsible AI tools throughout the ecosystem.
+## Quick Start
 
-Lens can be run in a notebook, a CI/CD pipeline, or anywhere else you do your ML analytics.
-It is extensible, and easily customized to your organizations assessments if they are not 
-supported by default. 
+```bash
+pip install movern
 
-Though it can be used alone, Lens shows its full value when connected to your organization's 
-[Credo AI App](https://www.credo.ai/product). Credo AI is an end-to-end AI Governance
-App that supports multi-stakeholder alignment, AI assessment (via Lens) and AI risk assessment.
-
-
-
-## Dependencies
-
-- Credo AI Lens supports Python 3.8+
-- Sphinx (optional for local docs site)
-
-
-## Installation
-
-The latest stable release (and required dependencies) can be installed from PyPI.
-
-```
-pip install credoai-lens
+# Launch the interactive assessment UI
+movern ui
 ```
 
-Additional installation instructions can be found in our [setup documentation](https://credoai-lens.readthedocs.io/en/stable/pages/setup.html)
+---
 
-## Getting Started
-To get started, see the [quickstart demo](https://credoai-lens.readthedocs.io/en/stable/notebooks/quickstart.html).
+## Standards Coverage
 
-If you are using the Credo AI Governance App, also check out the [governance integration demo](https://credoai-lens.readthedocs.io/en/stable/notebooks/governance_integration.html).
+| Standard | Areas covered |
+|----------|--------------|
+| **EU AI Act** | Art. 9 (Risk management), Art. 10 (Data governance), Art. 13 (Transparency), Art. 15 (Robustness) |
+| **NIST AI RMF** | GOVERN, MAP, MEASURE, MANAGE functions |
+| **ISO 42001** | Clause 6 (Planning), Clause 9 (Performance evaluation), Annex A controls |
 
-## Documentation
+---
 
-Documentation is hosted by [readthedocs](https://credoai-lens.readthedocs.io/en/stable/).
+## Demo Models
 
-For dev documentation, see [latest](https://credoai-lens.readthedocs.io/en/stable/index.html).
+Movern ships four pre-trained demo models so auditors can explore the tool without providing their own model:
 
-## AI Governance
+| Model | Task | Focus |
+|-------|------|-------|
+| **Credit Risk** | Binary classification | Fairness (age, sex), privacy, explainability |
+| **Hiring Screener** | Binary classification | Fairness (gender, race), data fairness |
+| **Healthcare Outcome** | Binary classification | Fairness (age, race, sex), privacy |
+| **Fraud Detection** | Binary classification | Performance, robustness, feature drift |
 
-As an assessment framework, Lens is an important component of your overall **AI Governance** strategy.
-But it's not the only component! Credo AI, the developer of Lens, also develops
-tools to satisfy your general AI Governance needs, which integrate easily with Lens.
+---
 
-To connect to [Credo AI's Governance App](https://www.credo.ai/product), see the Governance
-tutorial on [readthedocs](https://credoai-lens.readthedocs.io/en/stable/notebooks/governance_integration.html).
- 
-# For Lens developers
+## Running Your Own Model
 
-## Running tests
+```python
+from movern.lens import Lens
+from movern.artifacts import ClassificationModel, TabularData
+from movern.evaluators import Performance, ModelFairness
 
+model = ClassificationModel(name="my_model", model_like=my_sklearn_pipeline)
+assessment_data = TabularData(
+    name="test_data",
+    X=X_test,
+    y=y_test,
+    sensitive_features=sensitive_df,
+)
 
-Running a test
+lens = Lens(model=model, assessment_data=assessment_data)
+lens.add(Performance())
+lens.add(ModelFairness(metrics=["demographic_parity_difference"]))
+lens.run()
+lens.get_results()
+```
 
-```shell
+---
+
+## Architecture
+
+Movern revolves around three core concepts: **Artifacts**, **Evaluators**, and **Lens**.
+
+1. Wrap your model/data in **Artifact** classes (`ClassificationModel`, `TabularData`, etc.)
+2. Create a **Lens** instance with those artifacts
+3. Add **Evaluators** to the pipeline
+4. Call `lens.run()` — it validates compatibility, runs each evaluator, and collects results as `EvidenceContainer` objects
+
+### Available Evaluators
+
+| Evaluator | Purpose | Extra dep |
+|-----------|---------|-----------|
+| `Performance` | Accuracy, AUC, precision, recall | — |
+| `ModelFairness` | Demographic parity, equalized odds | — |
+| `DataFairness` | Training data distribution analysis | — |
+| `Privacy` | Membership inference attacks | `adversarial-robustness-toolbox` |
+| `ShapExplainer` | SHAP feature importance | `shap` |
+| `DataProfiler` | Full dataset profiling | `ydata-profiling` |
+| `DeepChecks` | Suite of model/data checks | `deepchecks` |
+| `FeatureDrift` | Population stability index | — |
+| `SurvivalAnalysis` | Kaplan-Meier, Cox models | `lifelines` |
+
+Install all extras:
+```bash
+pip install "movern[full]"
+```
+
+---
+
+## Development
+
+```bash
+# Run tests
 scripts/test.sh
+
+# Run with coverage
+scripts/test-reports.sh
+
+# Format code
+black movern/
+
+# Build docs
+cd docs && make html
 ```
 
-Running tests with pytest-watch
+---
 
-```shell
-ptw --runner "pytest -s"
-```
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).

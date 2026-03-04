@@ -1,7 +1,7 @@
 import pytest
 
-from credoai.modules.metrics import process_metrics
-from credoai.utils import check_subset
+from movern.modules.metrics import process_metrics
+from movern.utils import check_subset
 
 
 @pytest.mark.parametrize(

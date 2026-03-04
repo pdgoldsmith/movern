@@ -1,17 +1,18 @@
 #! /usr/bin/env python
 #
-# Copyright (C) 2021-2021 Credo AI
+# Movern — AI Model Governance Assessment Framework
+# Forked from Lens by Credo AI (https://github.com/credo-ai/credoai_lens)
 import setuptools
 
 # get version
-exec(open("credoai/_version.py").read())
-DESCRIPTION = "Lens: comprehensive assessment framework for AI systems"
-DISTNAME = "credoai-lens"
-MAINTAINER = "Ian Eisenberg"
-MAINTAINER_EMAIL = "ian@credo.ai"
-URL = ""
-LICENSE = ""
-DOWNLOAD_URL = "https://github.com/credo-ai/credoai_lens"
+exec(open("movern/_version.py").read())
+DESCRIPTION = "Movern: AI model governance assessment framework"
+DISTNAME = "movern"
+MAINTAINER = "Movern Contributors"
+MAINTAINER_EMAIL = ""
+URL = "https://github.com/movern-ai/movern"
+LICENSE = "Apache 2.0"
+DOWNLOAD_URL = "https://github.com/movern-ai/movern"
 VERSION = __version__
 PYTHON_REQUIRES = ">=3.7, <3.11"
 
@@ -52,10 +53,11 @@ CLASSIFIERS = [
 ]
 
 PACKAGE_DATA = {
-    "credoai": [
+    "movern": [
         "datasets/*",
         "datasets/static/nlp_generator_analyzer/persisted_models/*",
         "datasets/static/nlp_generator_analyzer/prompts/*",
+        "datasets/demo_models/models/*",
     ]
 }
 
@@ -85,4 +87,9 @@ if __name__ == "__main__":
         classifiers=CLASSIFIERS,
         include_package_data=True,
         package_data=PACKAGE_DATA,
+        entry_points={
+            "console_scripts": [
+                "movern=movern.cli:main",
+            ],
+        },
     )

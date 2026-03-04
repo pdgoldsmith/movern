@@ -1,4 +1,4 @@
 [run]
-omit = 
-        credoai/datasets/*
-        credoai/utils/policy_utils.py
+omit =
+        movern/datasets/*
+        movern/utils/policy_utils.py

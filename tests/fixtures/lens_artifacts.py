@@ -5,8 +5,8 @@ Any fixture added to the file will be immediately available due to
 addition of this module as plugin in the file `pytest.ini`.
 """
 from pytest import fixture
-from credoai.artifacts.model.comparison_model import DummyComparisonModel
-from credoai.artifacts import (
+from movern.artifacts.model.comparison_model import DummyComparisonModel
+from movern.artifacts import (
     Data,
     TabularData,
     ComparisonData,

@@ -1,8 +1,8 @@
 from copy import deepcopy
 
-from credoai.evaluators import Performance
-from credoai.prism import Prism
-from credoai.prism.compare import Compare
+from movern.evaluators import Performance
+from movern.prism import Prism
+from movern.prism.compare import Compare
 
 
 def test_prism_comparator(init_lens_credit):

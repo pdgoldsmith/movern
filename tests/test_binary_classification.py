@@ -7,7 +7,7 @@ data/models.
 
 import pytest
 
-from credoai.evaluators import (
+from movern.evaluators import (
     DataEquity,
     DataFairness,
     DataProfiler,
@@ -22,10 +22,10 @@ from credoai.evaluators import (
     Security,
     ShapExplainer,
 )
-from credoai.evaluators.ranking_fairness import RankingFairness
-from credoai.lens import Lens
+from movern.evaluators.ranking_fairness import RankingFairness
+from movern.lens import Lens
 
-from credoai.utils import ValidationError
+from movern.utils import ValidationError
 
 ##################################################
 #################### Init ########################
