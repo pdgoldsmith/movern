@@ -9,7 +9,7 @@ from pytest import fixture
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
-from credoai.datasets import fetch_creditdefault, fetch_testdata
+from movern.datasets import fetch_creditdefault, fetch_testdata
 
 from tensorflow.keras.datasets.mnist import load_data as load_mnist
 

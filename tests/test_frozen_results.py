@@ -11,8 +11,8 @@ from abc import ABC
 import pytest
 from pandas import testing
 
-from credoai.artifacts import ClassificationModel, TabularData
-from credoai.evaluators import (
+from movern.artifacts import ClassificationModel, TabularData
+from movern.evaluators import (
     DataEquity,
     DataFairness,
     DataProfiler,
@@ -23,8 +23,8 @@ from credoai.evaluators import (
     Security,
     evaluator,
 )
-from credoai.evaluators.utils.utils import name2evaluator
-from credoai.lens import Lens
+from movern.evaluators.utils.utils import name2evaluator
+from movern.lens import Lens
 
 SUPORTED_EVALUATORS = ["Performance", "ModelFairness"]
 FROZEN_METRICS = ["false_negative_rate", "average_precision_score"]

@@ -8,7 +8,7 @@ data/models.
 import pytest
 
 
-from credoai.evaluators import (
+from movern.evaluators import (
     DataEquity,
     DataProfiler,
     ModelEquity,

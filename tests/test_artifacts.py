@@ -1,13 +1,13 @@
 """
-Testing for specific credoai.artifacts.
+Testing for specific movern.artifacts.
 """
 import pytest
 
 from sklearn.linear_model import LogisticRegression
 
-from credoai.artifacts import TabularData
-from credoai.artifacts import DummyClassifier
-from credoai.utils import ValidationError
+from movern.artifacts import TabularData
+from movern.artifacts import DummyClassifier
+from movern.utils import ValidationError
 
 
 def test_base_data_property(credit_data):

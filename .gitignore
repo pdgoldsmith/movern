@@ -138,3 +138,9 @@ dmypy.json
 
 test-reports/
 junit.xml
+
+# Demo model artifacts (generated locally — run: python -m movern.datasets.demo_models.train_demos)
+movern/datasets/demo_models/models/*.pkl
+movern/datasets/demo_models/models/*.csv
+movern/datasets/demo_models/models/*.json
+

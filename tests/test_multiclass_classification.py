@@ -7,7 +7,7 @@ data/models.
 
 import pytest
 
-from credoai.evaluators import (
+from movern.evaluators import (
     ModelFairness,
     Performance,
     DataProfiler,
@@ -16,7 +16,7 @@ from credoai.evaluators import (
     ModelEquity,
     Security,
 )
-from credoai.modules.constants_metrics import FAIRNESS_FUNCTIONS
+from movern.modules.constants_metrics import FAIRNESS_FUNCTIONS
 
 
 ##################################################

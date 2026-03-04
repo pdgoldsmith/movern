@@ -13,7 +13,7 @@ addition of this module as plugin in the file `pytest.ini`.
 import pytest
 from connect.governance import Governance
 from pandas import DataFrame
-from credoai.lens import Lens
+from movern.lens import Lens
 from connect.governance.credo_api_client import CredoApiClient
 
 

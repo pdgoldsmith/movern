@@ -7,7 +7,7 @@ these can be potentially moved to artifacts/datasets modules.
 
 import pickle
 from pytest import fixture
-from credoai.artifacts import ClassificationModel, TabularData
+from movern.artifacts import ClassificationModel, TabularData
 
 # @fixture(scope="session")
 # def frozen_training_data():

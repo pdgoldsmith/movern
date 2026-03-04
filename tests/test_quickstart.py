@@ -5,10 +5,10 @@ Tests the functionality in the quickstart notebook.
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from credoai.artifacts import ClassificationModel, TabularData
-from credoai.datasets import fetch_creditdefault
-from credoai.evaluators import ModelFairness, Performance, Privacy
-from credoai.lens import Lens
+from movern.artifacts import ClassificationModel, TabularData
+from movern.datasets import fetch_creditdefault
+from movern.evaluators import ModelFairness, Performance, Privacy
+from movern.lens import Lens
 
 
 def setup_artifacts():
