@@ -4,15 +4,55 @@ from typing import Dict, List
 
 import streamlit as st
 
-EVALUATOR_DESCRIPTIONS: Dict[str, str] = {
-    "Performance": "Accuracy, AUC, precision, recall, F1",
-    "ModelFairness": "Demographic parity, equalized odds, equal opportunity",
-    "DataFairness": "Statistical analysis of training data distribution across groups",
-    "Privacy": "Membership inference attack risk (requires ART package)",
-    "ShapExplainer": "SHAP feature importance (requires shap package)",
-    "DataProfiler": "Full dataset profiling report (requires ydata-profiling)",
-    "DeepChecks": "Comprehensive model and data integrity checks (requires deepchecks)",
-    "FeatureDrift": "Population stability index for distribution shift detection",
+EVALUATOR_METADATA: Dict[str, Dict[str, str]] = {
+    "Performance": {
+        "description": "Measures predictive accuracy using metrics like accuracy, AUC, precision, recall, and F1. Establishes the baseline capability of the model.",
+        "eu_ai_act": "Art. 15 (Accuracy & robustness)",
+        "nist_ai_rmf": "MEASURE 2.5",
+        "iso_42001": "Clause 9.1",
+    },
+    "ModelFairness": {
+        "description": "Tests whether the model produces equitable outcomes across demographic groups using metrics like demographic parity difference and equalized odds.",
+        "eu_ai_act": "Art. 10 (Data governance) + Art. 5(1)(d) (Bias prohibition)",
+        "nist_ai_rmf": "MEASURE 2.2 / GOVERN 6.2",
+        "iso_42001": "Annex A.6 (Fairness)",
+    },
+    "DataFairness": {
+        "description": "Analyses the training data distribution across sensitive groups to detect representational bias before it propagates to model outcomes.",
+        "eu_ai_act": "Art. 10 (Data governance)",
+        "nist_ai_rmf": "MAP 1.5 / MEASURE 2.2",
+        "iso_42001": "Annex A.6 (Fairness)",
+    },
+    "Privacy": {
+        "description": "Runs membership inference attacks to estimate how much the model reveals about its training data. Requires the adversarial-robustness-toolbox package.",
+        "eu_ai_act": "Art. 9 (Risk management) + GDPR Art. 25",
+        "nist_ai_rmf": "MEASURE 2.6 / MANAGE 2.4",
+        "iso_42001": "Annex A.7 (Privacy)",
+    },
+    "ShapExplainer": {
+        "description": "Computes SHAP values to explain individual predictions and rank feature importance. Requires the shap package.",
+        "eu_ai_act": "Art. 13 (Transparency & explainability)",
+        "nist_ai_rmf": "GOVERN 1.7 / MEASURE 2.9",
+        "iso_42001": "Clause 8.4 (Transparency)",
+    },
+    "DataProfiler": {
+        "description": "Generates a full statistical profile of the assessment dataset including distributions, missing values, and correlations. Requires ydata-profiling.",
+        "eu_ai_act": "Art. 10 (Data governance)",
+        "nist_ai_rmf": "MAP 1.5",
+        "iso_42001": "Clause 8.2 (Data quality)",
+    },
+    "DeepChecks": {
+        "description": "Runs a comprehensive suite of data integrity and model validation checks. Requires the deepchecks package.",
+        "eu_ai_act": "Art. 9 (Risk management) + Art. 15 (Robustness)",
+        "nist_ai_rmf": "MEASURE 2.5 / MEASURE 2.7",
+        "iso_42001": "Clause 9.1",
+    },
+    "FeatureDrift": {
+        "description": "Detects distributional shift between reference and current data using Population Stability Index. Important for models deployed over time.",
+        "eu_ai_act": "Art. 9 (Risk management) + Art. 17 (Post-market monitoring)",
+        "nist_ai_rmf": "MEASURE 2.7",
+        "iso_42001": "Clause 9.1",
+    },
 }
 
 DEFAULT_EVALUATORS: Dict[str, List[str]] = {
@@ -40,16 +80,31 @@ def evaluator_selector(model_key: str = "custom") -> List[str]:
     defaults = DEFAULT_EVALUATORS.get(model_key, DEFAULT_EVALUATORS["custom"])
 
     st.markdown("#### Select Evaluators")
+
+    # Header row
+    cols = st.columns([0.4, 1.6, 1.5, 1.2, 1.0])
+    cols[0].markdown("**Select**")
+    cols[1].markdown("**Evaluator**")
+    cols[2].markdown("**🇪🇺 EU AI Act**")
+    cols[3].markdown("**🇺🇸 NIST AI RMF**")
+    cols[4].markdown("**🌐 ISO 42001**")
+    st.divider()
+
     selected = []
-    for name, description in EVALUATOR_DESCRIPTIONS.items():
-        checked = st.checkbox(
-            f"**{name}** — {description}",
-            value=(name in defaults),
-            key=f"ev_{model_key}_{name}",
+    for name, meta in EVALUATOR_METADATA.items():
+        cols = st.columns([0.4, 1.6, 1.5, 1.2, 1.0])
+        checked = cols[0].checkbox(
+            "", value=(name in defaults), key=f"ev_{model_key}_{name}"
         )
+        cols[1].markdown(f"**{name}**")
+        cols[1].caption(meta["description"])
+        cols[2].caption(meta["eu_ai_act"])
+        cols[3].caption(meta["nist_ai_rmf"])
+        cols[4].caption(meta["iso_42001"])
         if checked:
             selected.append(name)
 
+    st.divider()
     if not selected:
         st.warning("Select at least one evaluator.")
 
