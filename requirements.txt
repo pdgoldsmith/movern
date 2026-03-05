@@ -9,7 +9,10 @@ typing_extensions>=4.3.0
 
 # Movern UI
 streamlit>=1.28.0
-python-docx>=1.0.0
+reportlab>=4.0.0
+
+# required to regenerate demo models (train_demos.py only — not needed at runtime)
+ucimlrepo>=0.0.3
 
 # required for SurvivalAnalysis evaluator
 lifelines>=0.27.3 

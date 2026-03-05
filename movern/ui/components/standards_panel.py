@@ -7,35 +7,54 @@ import streamlit as st
 
 from movern.ui.report.standards_map import STANDARDS_MAP
 
+_SECTIONS = [
+    ("Fairness", "⚖️", "Metrics that measure equitable outcomes across demographic groups."),
+    ("Accountability", "📋", "Metrics that establish model performance, robustness, privacy, and data quality."),
+    ("Transparency", "🔍", "Metrics that explain how the model arrives at its predictions."),
+]
+
 
 def standards_panel(results: List[Dict[str, Any]]) -> None:
-    """Render a compliance mapping table for the metrics in ``results``.
-
-    Parameters
-    ----------
-    results : list of dict
-        Assessment results containing ``"metric"`` keys.
-    """
+    """Render a compliance mapping organised into Fairness, Accountability, and Transparency."""
     metric_keys = list({r.get("metric", "") for r in results if r.get("metric")})
-    rows = []
+
+    # Build rows grouped by category
+    by_category: Dict[str, List[Dict]] = {label: [] for label, _, _ in _SECTIONS}
     for key in metric_keys:
         mapping = STANDARDS_MAP.get(key)
-        if mapping:
-            rows.append({
-                "Metric": mapping["display"],
-                "EU AI Act": mapping["eu_ai_act"],
-                "NIST AI RMF": mapping["nist_ai_rmf"],
-                "ISO 42001": mapping["iso_42001"],
-                "Description": mapping["description"],
-            })
+        if not mapping:
+            continue
+        category = mapping.get("category", "Accountability")
+        if category not in by_category:
+            category = "Accountability"
+        by_category[category].append({
+            "Metric": mapping["display"],
+            "Description": mapping["description"],
+            "🇪🇺 EU AI Act": mapping["eu_ai_act"],
+            "🇺🇸 NIST AI RMF": mapping["nist_ai_rmf"],
+            "🌐 ISO 42001": mapping["iso_42001"],
+        })
 
-    if not rows:
+    has_any = any(rows for rows in by_category.values())
+    if not has_any:
         st.info("No standards mappings found for the assessed metrics.")
         return
 
-    df = pd.DataFrame(rows)
     st.subheader("Compliance Mapping")
     st.markdown(
-        "The table below maps each assessed metric to the relevant regulatory requirements."
+        "Assessment results mapped to EU AI Act, NIST AI RMF, and ISO 42001 requirements, "
+        "organised by governance category."
     )
-    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    for label, icon, description in _SECTIONS:
+        rows = by_category.get(label, [])
+        if not rows:
+            continue
+        st.markdown(f"#### {icon} {label}")
+        st.caption(description)
+        st.dataframe(
+            pd.DataFrame(rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.markdown("")

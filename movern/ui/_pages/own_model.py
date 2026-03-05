@@ -6,11 +6,11 @@ import pickle
 import pandas as pd
 import streamlit as st
 
-from movern.ui._runner import run_assessment
+from movern.ui._runner import get_packages_to_install, install_packages, run_assessment
 from movern.ui.components.evaluator_selector import evaluator_selector
 from movern.ui.components.results_display import display_results
 from movern.ui.components.standards_panel import standards_panel
-from movern.ui.report.docx_builder import build_report
+from movern.ui.report.pdf_builder import build_report
 
 
 def render():
@@ -85,6 +85,10 @@ def render():
 
     # --- Run ---
     if st.button("Run Assessment", type="primary", disabled=not selected_evaluators):
+        to_install = get_packages_to_install(selected_evaluators)
+        if to_install:
+            with st.spinner(f"Installing {', '.join(to_install)} (one-time, may take a minute)…"):
+                install_packages(to_install)
         with st.spinner("Running assessment…"):
             try:
                 results = run_assessment(
@@ -118,10 +122,10 @@ def render():
                 st.session_state["own_evaluators"],
             )
             st.download_button(
-                label="Download Audit Report (.docx)",
+                label="Download Audit Report (.pdf)",
                 data=report_bytes,
-                file_name="movern_audit_custom.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                file_name="movern_audit_custom.pdf",
+                mime="application/pdf",
             )
         except ImportError as e:
             st.warning(f"Report generation unavailable: {e}")

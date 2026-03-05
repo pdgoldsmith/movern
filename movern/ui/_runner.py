@@ -5,9 +5,37 @@ Converts evaluator selection + artifacts into a flat list of result dicts
 that the UI can render and include in reports.
 """
 
+import subprocess
+import sys
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+
+# Heavy optional packages installed on-demand when their evaluator is selected.
+_HEAVY_PACKAGES = {
+    "DeepChecks": ("deepchecks", "deepchecks"),
+    "Privacy":    ("art", "adversarial-robustness-toolbox"),
+}
+
+
+def get_packages_to_install(evaluator_names: List[str]) -> List[str]:
+    """Return pip specs for any heavy packages not yet installed."""
+    missing = []
+    for ev in evaluator_names:
+        if ev in _HEAVY_PACKAGES:
+            import_name, pip_spec = _HEAVY_PACKAGES[ev]
+            try:
+                __import__(import_name)
+            except ImportError:
+                missing.append(pip_spec)
+    return missing
+
+
+def install_packages(pip_specs: List[str]) -> None:
+    """Install a list of pip specs."""
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--quiet", *pip_specs]
+    )
 
 
 def run_assessment(
@@ -53,7 +81,7 @@ def run_assessment(
         results.extend(_run_data_profiler_stub(X_test))
 
     if "DeepChecks" in evaluator_names:
-        results.extend(_run_deepchecks_stub())
+        results.extend(_run_deepchecks_stub(pipeline, X_test, y_test))
 
     return results
 
@@ -107,7 +135,7 @@ def _run_model_fairness(pipeline, X_test, y_test, sensitive):
     y_pred = pipeline.predict(X_test)
     rows = []
     for col in sensitive.columns:
-        sf = sensitive[col]
+        sf = sensitive[col].fillna("Unknown").astype(str)
         try:
             dpd = demographic_parity_difference(y_test, y_pred, sensitive_features=sf)
             rows.append({"evaluator": "ModelFairness",
@@ -136,10 +164,11 @@ def _run_model_fairness(pipeline, X_test, y_test, sensitive):
 def _run_data_fairness(X_test, y_test, sensitive):
     rows = []
     for col in sensitive.columns:
-        groups = sensitive[col].unique()
-        for g in sorted(groups):
-            mask = sensitive[col] == g
-            positive_rate = float(y_test[mask].mean()) if mask.sum() > 0 else 0.0
+        # Drop NaN and coerce to string to avoid mixed-type sort errors
+        sf = sensitive[col].dropna().astype(str)
+        for g in sorted(sf.unique()):
+            mask = sf == g
+            positive_rate = float(y_test.loc[mask.index][mask].mean()) if mask.sum() > 0 else 0.0
             rows.append({
                 "evaluator": "DataFairness",
                 "metric": "positive_label_rate",
@@ -171,16 +200,20 @@ def _run_feature_drift(X_test):
 
 
 # ---------------------------------------------------------------------------
-# Privacy (stub — requires ART)
+# Privacy — membership inference via ART
 # ---------------------------------------------------------------------------
 
 def _run_privacy_stub():
-    return [{
-        "evaluator": "Privacy",
-        "metric": "membership_inference_attack_score",
-        "value": "Requires adversarial-robustness-toolbox (pip install adversarial-robustness-toolbox)",
-        "group": "Overall",
-    }]
+    try:
+        from art.attacks.inference.membership_inference import MembershipInferenceBlackBoxRuleBased
+        from art.estimators.classification import SklearnClassifier
+    except ImportError:
+        return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
+                 "value": "Requires adversarial-robustness-toolbox (pip install adversarial-robustness-toolbox)",
+                 "group": "Overall"}]
+    return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
+             "value": "Privacy evaluation requires training data — not available in demo mode.",
+             "group": "Overall"}]
 
 
 # ---------------------------------------------------------------------------
@@ -238,13 +271,62 @@ def _run_data_profiler_stub(X_test):
 
 
 # ---------------------------------------------------------------------------
-# DeepChecks (stub)
+# DeepChecks
 # ---------------------------------------------------------------------------
 
-def _run_deepchecks_stub():
-    return [{
-        "evaluator": "DeepChecks",
-        "metric": "error",
-        "value": "Requires deepchecks (pip install deepchecks)",
-        "group": "Overall",
-    }]
+def _run_deepchecks_stub(pipeline=None, X_test=None, y_test=None):
+    try:
+        import numpy as _np
+        if not hasattr(_np, "Inf"):  # removed in NumPy 2.0, required by deepchecks
+            _np.Inf = _np.inf
+        from deepchecks.tabular import Dataset as DcDataset
+        from deepchecks.tabular.checks import (
+            ClassImbalance,
+            FeatureLabelCorrelation,
+            MixedDataTypes,
+            IsSingleValue,
+        )
+    except ImportError:
+        return [{"evaluator": "DeepChecks", "metric": "error",
+                 "value": "Requires deepchecks (pip install deepchecks)",
+                 "group": "Overall"}]
+
+    try:
+        cat_features = X_test.select_dtypes(include=["object", "category"]).columns.tolist()
+        ds = DcDataset(X_test, label=y_test, cat_features=cat_features)
+        rows = []
+
+        # Class imbalance
+        try:
+            result = ClassImbalance().run(ds)
+            for cls, ratio in result.value.items():
+                rows.append({"evaluator": "DeepChecks", "metric": "class_imbalance_ratio",
+                             "value": round(float(ratio), 4), "group": str(cls)})
+        except Exception:
+            pass
+
+        # Feature-label correlation
+        try:
+            result = FeatureLabelCorrelation().run(ds)
+            for feat, corr in result.value.items():
+                rows.append({"evaluator": "DeepChecks", "metric": "feature_label_correlation",
+                             "value": round(float(corr), 4), "group": feat})
+        except Exception:
+            pass
+
+        # Mixed data types
+        try:
+            result = MixedDataTypes().run(ds)
+            if result.passed_conditions():
+                rows.append({"evaluator": "DeepChecks", "metric": "mixed_data_types",
+                             "value": "No mixed types detected", "group": "Overall"})
+            else:
+                rows.append({"evaluator": "DeepChecks", "metric": "mixed_data_types",
+                             "value": "Mixed types detected in one or more columns", "group": "Overall"})
+        except Exception:
+            pass
+
+        return rows if rows else [{"evaluator": "DeepChecks", "metric": "status",
+                                   "value": "No checks returned results", "group": "Overall"}]
+    except Exception as e:
+        return [{"evaluator": "DeepChecks", "metric": "error", "value": str(e), "group": "Overall"}]

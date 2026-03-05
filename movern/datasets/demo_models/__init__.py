@@ -54,11 +54,36 @@ def load_demo_model(name: str) -> Tuple[object, pd.DataFrame, pd.Series, pd.Data
         )
 
     model_path = MODELS_DIR / f"{name}_model.pkl"
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"Demo model files not found at {MODELS_DIR}. "
-            "Run: python -m movern.datasets.demo_models.train_demos"
-        )
+    metadata_path = MODELS_DIR / f"{name}_metadata.json"
+
+    # Auto-train if files are missing or metadata is from an older version
+    # (detected by absence of the 'assessment_data' key).
+    needs_train = not model_path.exists()
+    if not needs_train and metadata_path.exists():
+        import json as _json
+        with open(metadata_path) as _f:
+            _meta = _json.load(_f)
+        if "assessment_data" not in _meta:
+            needs_train = True
+
+    if needs_train:
+        from movern.datasets.demo_models.train_demos import DEMO_TRAINERS
+        import pickle as _pickle
+        import pandas as _pd
+        import json as _json
+
+        print(f"Building demo model '{name}' for the first time…")
+        pipeline, X_test, y_test, sensitive_test, metadata = DEMO_TRAINERS[name]()
+
+        with open(MODELS_DIR / f"{name}_model.pkl", "wb") as f:
+            _pickle.dump(pipeline, f)
+        X_test.to_csv(MODELS_DIR / f"{name}_X_test.csv", index=False)
+        _pd.Series(y_test, name="target").to_csv(MODELS_DIR / f"{name}_y_test.csv", index=False)
+        sensitive_test.to_csv(MODELS_DIR / f"{name}_sensitive.csv", index=False)
+        with open(metadata_path, "w") as f:
+            _json.dump(metadata, f, indent=2)
+
+        return pipeline, X_test, y_test, sensitive_test, metadata
 
     with open(model_path, "rb") as f:
         pipeline = pickle.load(f)
