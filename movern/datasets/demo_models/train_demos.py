@@ -161,7 +161,9 @@ def _train_credit():
             ),
         },
     }
-    return pipe, X_test, y_test, s_test, metadata
+    X_train_sample = X_train.sample(n=min(500, len(X_train)), random_state=RANDOM_STATE)
+    y_train_sample = y_train.loc[X_train_sample.index]
+    return pipe, X_test, y_test, s_test, X_train_sample, y_train_sample, metadata
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +263,9 @@ def _train_hiring():
             ),
         },
     }
-    return pipe, X_test, y_test, s_test, metadata
+    X_train_sample = X_train.sample(n=min(500, len(X_train)), random_state=RANDOM_STATE)
+    y_train_sample = y_train.loc[X_train_sample.index]
+    return pipe, X_test, y_test, s_test, X_train_sample, y_train_sample, metadata
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +359,9 @@ def _train_healthcare():
             ),
         },
     }
-    return pipe, X_test, y_test, s_test, metadata
+    X_train_sample = X_train.sample(n=min(500, len(X_train)), random_state=RANDOM_STATE)
+    y_train_sample = y_train.loc[X_train_sample.index]
+    return pipe, X_test, y_test, s_test, X_train_sample, y_train_sample, metadata
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +462,9 @@ def _train_fraud():
             ),
         },
     }
-    return pipe, X_test, y_test, s_test, metadata
+    X_train_sample = X_train.sample(n=min(500, len(X_train)), random_state=RANDOM_STATE)
+    y_train_sample = y_train.loc[X_train_sample.index]
+    return pipe, X_test, y_test, s_test, X_train_sample, y_train_sample, metadata
 
 
 # ---------------------------------------------------------------------------
@@ -482,7 +490,7 @@ def train_all():
 
     for name, trainer in DEMO_TRAINERS.items():
         print(f"Training {name}…")
-        pipeline, X_test, y_test, sensitive_test, metadata = trainer()
+        pipeline, X_test, y_test, sensitive_test, X_train_sample, y_train_sample, metadata = trainer()
 
         with open(MODELS_DIR / f"{name}_model.pkl", "wb") as f:
             pickle.dump(pipeline, f)
@@ -490,6 +498,8 @@ def train_all():
         X_test.to_csv(MODELS_DIR / f"{name}_X_test.csv", index=False)
         pd.Series(y_test, name="target").to_csv(MODELS_DIR / f"{name}_y_test.csv", index=False)
         sensitive_test.to_csv(MODELS_DIR / f"{name}_sensitive.csv", index=False)
+        X_train_sample.to_csv(MODELS_DIR / f"{name}_X_train_sample.csv", index=False)
+        pd.Series(y_train_sample, name="target").to_csv(MODELS_DIR / f"{name}_y_train_sample.csv", index=False)
 
         with open(MODELS_DIR / f"{name}_metadata.json", "w") as f:
             json.dump(metadata, f, indent=2)

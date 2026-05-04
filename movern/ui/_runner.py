@@ -45,6 +45,8 @@ def run_assessment(
     sensitive: Optional[pd.DataFrame],
     evaluator_names: List[str],
     metadata: Dict[str, Any],
+    X_train: Optional[pd.DataFrame] = None,
+    y_train: Optional[pd.Series] = None,
 ) -> List[Dict[str, Any]]:
     """Run selected evaluators and return a flat list of result dicts.
 
@@ -72,7 +74,7 @@ def run_assessment(
 
     # Optional heavy evaluators — attempt import gracefully
     if "Privacy" in evaluator_names:
-        results.extend(_run_privacy_stub())
+        results.extend(_run_privacy(pipeline, X_test, y_test, X_train, y_train))
 
     if "ShapExplainer" in evaluator_names:
         results.extend(_run_shap(pipeline, X_test))
@@ -203,7 +205,7 @@ def _run_feature_drift(X_test):
 # Privacy — membership inference via ART
 # ---------------------------------------------------------------------------
 
-def _run_privacy_stub():
+def _run_privacy(pipeline, X_test, y_test, X_train=None, y_train=None):
     try:
         from art.attacks.inference.membership_inference import MembershipInferenceBlackBoxRuleBased
         from art.estimators.classification import SklearnClassifier
@@ -211,9 +213,52 @@ def _run_privacy_stub():
         return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
                  "value": "Requires adversarial-robustness-toolbox (pip install adversarial-robustness-toolbox)",
                  "group": "Overall"}]
-    return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
-             "value": "Privacy evaluation requires training data — not available in demo mode.",
-             "group": "Overall"}]
+
+    if X_train is None or len(X_train) == 0:
+        return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
+                 "value": "No training sample available for membership inference.",
+                 "group": "Overall"}]
+
+    try:
+        import numpy as np
+
+        # Pre-transform through the pipeline's preprocessor so ART receives a
+        # plain float numpy array rather than a DataFrame with named columns.
+        # The ColumnTransformer inside the pipeline cannot select columns by
+        # name from a numpy array, which causes "str - float" type errors.
+        if hasattr(pipeline, 'steps') and len(pipeline.steps) > 1:
+            X_train_t = pipeline[:-1].transform(X_train)
+            X_test_t = pipeline[:-1].transform(X_test)
+            clf = pipeline[-1]
+        else:
+            X_train_t = np.asarray(X_train)
+            X_test_t = np.asarray(X_test)
+            clf = pipeline
+
+        art_clf = SklearnClassifier(model=clf)
+        attack = MembershipInferenceBlackBoxRuleBased(art_clf)
+
+        # Infer membership: 1 = predicted member, 0 = predicted non-member
+        member_inferred = attack.infer(X_train_t, y_train.values.reshape(-1, 1))
+        nonmember_inferred = attack.infer(X_test_t, y_test.values.reshape(-1, 1))
+
+        # Attack accuracy: how often the attacker correctly identifies members vs non-members
+        attack_accuracy = float(
+            (member_inferred.sum() + (1 - nonmember_inferred).sum())
+            / (len(member_inferred) + len(nonmember_inferred))
+        )
+        # Attacker advantage: how much better than random (0.5) the attack is
+        attacker_advantage = float(max(0.0, attack_accuracy - 0.5) * 2)
+
+        return [
+            {"evaluator": "Privacy", "metric": "membership_inference_attack_score",
+             "value": round(attack_accuracy, 4), "group": "Overall"},
+            {"evaluator": "Privacy", "metric": "attacker_advantage",
+             "value": round(attacker_advantage, 4), "group": "Overall"},
+        ]
+    except Exception as e:
+        return [{"evaluator": "Privacy", "metric": "membership_inference_attack_score",
+                 "value": str(e), "group": "Overall"}]
 
 
 # ---------------------------------------------------------------------------
@@ -223,12 +268,40 @@ def _run_privacy_stub():
 def _run_shap(pipeline, X_test):
     try:
         import shap
-        clf = pipeline.named_steps.get("clf", pipeline[-1])
-        explainer = shap.Explainer(clf, X_test)
-        shap_values = explainer(X_test, check_additivity=False)
-        importance = abs(shap_values.values).mean(axis=0)
+        import numpy as np
+
+        # Pre-transform through the pipeline's preprocessor so SHAP receives a
+        # plain float numpy array. Passing raw X_test fails for models with
+        # string columns (e.g. healthcare race/gender/age) because the
+        # classifier step expects post-preprocessed floats.
+        if hasattr(pipeline, 'steps') and len(pipeline.steps) > 1:
+            preprocessor = pipeline[:-1]
+            clf = pipeline[-1]
+            X_transformed = preprocessor.transform(X_test)
+
+            # Recover output feature names from the ColumnTransformer if possible.
+            try:
+                feature_names = preprocessor[-1].get_feature_names_out()
+                # Strip the "num__" / "cat__" prefixes added by ColumnTransformer.
+                feature_names = [n.split("__", 1)[-1] for n in feature_names]
+            except Exception:
+                feature_names = [f"feature_{i}" for i in range(X_transformed.shape[1])]
+        else:
+            clf = pipeline
+            X_transformed = X_test.values if hasattr(X_test, 'values') else np.asarray(X_test)
+            feature_names = list(X_test.columns) if hasattr(X_test, 'columns') else [f"feature_{i}" for i in range(X_transformed.shape[1])]
+
+        explainer = shap.Explainer(clf, X_transformed)
+        shap_values = explainer(X_transformed, check_additivity=False)
+        vals = shap_values.values
+        # Some explainers (e.g. TreeExplainer on RandomForest) return a 3-D
+        # array (n_samples, n_features, n_classes). Collapse to 2-D by taking
+        # the positive class for binary classification, or mean across classes.
+        if vals.ndim == 3:
+            vals = vals[:, :, 1] if vals.shape[2] == 2 else vals.mean(axis=2)
+        importance = abs(vals).mean(axis=0)
         rows = []
-        for feat, imp in zip(X_test.columns, importance):
+        for feat, imp in zip(feature_names, importance):
             rows.append({
                 "evaluator": "ShapExplainer",
                 "metric": "shap_feature_importance",

@@ -80,27 +80,18 @@ def evaluator_selector(model_key: str = "custom") -> List[str]:
     defaults = DEFAULT_EVALUATORS.get(model_key, DEFAULT_EVALUATORS["custom"])
 
     st.markdown("#### Select Evaluators")
-
-    # Header row
-    cols = st.columns([0.4, 1.6, 1.5, 1.2, 1.0])
-    cols[0].markdown("**Select**")
-    cols[1].markdown("**Evaluator**")
-    cols[2].markdown("**🇪🇺 EU AI Act**")
-    cols[3].markdown("**🇺🇸 NIST AI RMF**")
-    cols[4].markdown("**🌐 ISO 42001**")
     st.divider()
 
     selected = []
     for name, meta in EVALUATOR_METADATA.items():
-        cols = st.columns([0.4, 1.6, 1.5, 1.2, 1.0])
-        checked = cols[0].checkbox(
-            "", value=(name in defaults), key=f"ev_{model_key}_{name}"
+        checked = st.checkbox(f"**{name}**", value=(name in defaults), key=f"ev_{model_key}_{name}")
+        st.caption(meta["description"])
+        st.caption(
+            f"🇪🇺 EU AI Act: {meta['eu_ai_act']}  ·  "
+            f"🇺🇸 NIST AI RMF: {meta['nist_ai_rmf']}  ·  "
+            f"🌐 ISO 42001: {meta['iso_42001']}"
         )
-        cols[1].markdown(f"**{name}**")
-        cols[1].caption(meta["description"])
-        cols[2].caption(meta["eu_ai_act"])
-        cols[3].caption(meta["nist_ai_rmf"])
-        cols[4].caption(meta["iso_42001"])
+        st.markdown("")
         if checked:
             selected.append(name)
 

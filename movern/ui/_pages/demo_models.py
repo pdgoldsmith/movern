@@ -33,7 +33,7 @@ def render():
     # --- Load model (auto-trains on first use) ---
     try:
         with st.spinner(f"Loading {MODEL_LABELS.get(model_key, model_key).split(' —')[0]} model… (first load may take a minute)"):
-            pipeline, X_test, y_test, sensitive, metadata = load_demo_model(model_key)
+            pipeline, X_test, y_test, sensitive, X_train_sample, y_train_sample, metadata = load_demo_model(model_key)
     except Exception as e:
         st.error(f"Failed to load model: {e}")
         return
@@ -113,6 +113,7 @@ def render():
                 results = run_assessment(
                     pipeline, X_test, y_test, sensitive,
                     selected_evaluators, metadata,
+                    X_train=X_train_sample, y_train=y_train_sample,
                 )
                 st.session_state[f"results_{model_key}"] = results
                 st.session_state[f"metadata_{model_key}"] = metadata

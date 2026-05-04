@@ -73,13 +73,15 @@ def load_demo_model(name: str) -> Tuple[object, pd.DataFrame, pd.Series, pd.Data
         import json as _json
 
         print(f"Building demo model '{name}' for the first time…")
-        pipeline, X_test, y_test, sensitive_test, metadata = DEMO_TRAINERS[name]()
+        pipeline, X_test, y_test, sensitive_test, X_train_sample, y_train_sample, metadata = DEMO_TRAINERS[name]()
 
         with open(MODELS_DIR / f"{name}_model.pkl", "wb") as f:
             _pickle.dump(pipeline, f)
         X_test.to_csv(MODELS_DIR / f"{name}_X_test.csv", index=False)
         _pd.Series(y_test, name="target").to_csv(MODELS_DIR / f"{name}_y_test.csv", index=False)
         sensitive_test.to_csv(MODELS_DIR / f"{name}_sensitive.csv", index=False)
+        X_train_sample.to_csv(MODELS_DIR / f"{name}_X_train_sample.csv", index=False)
+        _pd.Series(y_train_sample, name="target").to_csv(MODELS_DIR / f"{name}_y_train_sample.csv", index=False)
         with open(metadata_path, "w") as f:
             _json.dump(metadata, f, indent=2)
 
@@ -90,9 +92,20 @@ def load_demo_model(name: str) -> Tuple[object, pd.DataFrame, pd.Series, pd.Data
 
     X_test = pd.read_csv(MODELS_DIR / f"{name}_X_test.csv")
     y_test = pd.read_csv(MODELS_DIR / f"{name}_y_test.csv").squeeze("columns")
-    sensitive = pd.read_csv(MODELS_DIR / f"{name}_sensitive.csv")
+    sensitive_path = MODELS_DIR / f"{name}_sensitive.csv"
+    try:
+        sensitive = pd.read_csv(sensitive_path)
+    except Exception:
+        sensitive = pd.DataFrame()  # model has no sensitive features (e.g. fraud)
+
+    try:
+        X_train_sample = pd.read_csv(MODELS_DIR / f"{name}_X_train_sample.csv")
+        y_train_sample = pd.read_csv(MODELS_DIR / f"{name}_y_train_sample.csv").squeeze("columns")
+    except Exception:
+        X_train_sample = pd.DataFrame()
+        y_train_sample = pd.Series(dtype=int)
 
     with open(MODELS_DIR / f"{name}_metadata.json") as f:
         metadata = json.load(f)
 
-    return pipeline, X_test, y_test, sensitive, metadata
+    return pipeline, X_test, y_test, sensitive, X_train_sample, y_train_sample, metadata

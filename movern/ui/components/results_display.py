@@ -48,7 +48,8 @@ METRIC_LABELS: Dict[str, str] = {
     "sensitive_feature_prediction_score": "Sensitive Feature Predictability (Proxy Risk)",
     "max_proxy_mutual_information": "Maximum Proxy Mutual Information",
     # Privacy
-    "membership_inference_attack_score": "Membership Inference Risk Score",
+    "membership_inference_attack_score": "Membership Inference Attack Accuracy",
+    "attacker_advantage": "Attacker Advantage (Privacy Leakage)",
     "model_based_attack_score": "Model-Based Privacy Attack Score",
     "rule_based_attack_score": "Rule-Based Privacy Attack Score",
     # Drift
@@ -150,6 +151,10 @@ METRIC_GUIDANCE: Dict[str, Dict[str, str]] = {
     "membership_inference_attack_score": {
         "range": "0.50 = no leakage (random guess). Closer to 1.0 = higher privacy risk.",
         "note": "No regulatory numeric threshold. GDPR Art. 25 / EU AI Act Art. 9 require risk to be 'minimised'. Values > 0.60 warrant investigation.",
+    },
+    "attacker_advantage": {
+        "range": "0.0 = no advantage (model is private). 1.0 = perfect membership inference.",
+        "note": "Normalised measure of how much better than random the attack performs. Values < 0.1 are generally considered acceptable.",
     },
     "model_based_attack_score": {
         "range": "0.50 = no leakage. Higher values indicate greater membership inference risk.",
